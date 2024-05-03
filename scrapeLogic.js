@@ -1,4 +1,3 @@
-edit
 const puppeteer = require('puppeteer');
 
 async function scrapeJobDetails(links) {
