@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 
 async function scrapeJobDetails(links) {
-  const browser = await puppeteer.launch({ headless: false }); // Set to false to watch the browser actions
+  const browser = await puppeteer.launch({ headless: false }); // Keep headless false for debugging
   const page = await browser.newPage();
 
   // Navigate to the login page
@@ -9,27 +9,31 @@ async function scrapeJobDetails(links) {
   await page.waitForSelector('#username', { visible: true });
   await page.waitForSelector('#password', { visible: true });
 
-  // Enter credentials and login (replace 'your-email@example.com' and 'yourpassword' with your actual credentials)
-  await page.type('#username', 'your-email@example.com');
-  await page.type('#password', 'yourpassword');
+  // Enter credentials and login
+  await page.type('#username', 'info@manelwaffles.com');
+  await page.type('#password', 'JlasdhnGWuhfnas$%$);
   await page.click('button[type="submit"]');
   await page.waitForNavigation({ waitUntil: 'networkidle0' });
 
-  // Navigate and scrape each job link
+  // Debug: Take a screenshot after login
+  await page.screenshot({ path: 'after-login.png' });
+
+  // Debug: Print HTML to console
+  const bodyHTML = await page.evaluate(() => document.body.innerHTML);
+  console.log(bodyHTML);
+
   for (const link of links) {
     try {
       await page.goto(link, { waitUntil: 'networkidle2' });
 
-      // Check for the presence of the search box input to handle the specific error
-      const searchInputExists = await page.$('.search-box__input');
-      if (!searchInputExists) {
-        console.error('Search box input not found, taking a screenshot for debugging...');
-        await page.screenshot({ path: `debug-${Date.now()}.png` });
-        continue; // Skip this link and go to the next one
-      }
+      // Debug: Take a screenshot on each job page
+      await page.screenshot({ path: `debug-${link.slice(-10)}.png` });
 
-      // Wait for the specific element to be sure it's loaded
-      await page.waitForSelector('.jobs-description__content .jobs-box__html-content .mt4', { visible: true });
+      const searchInput = await page.$('.search-box__input');
+      if (!searchInput) {
+        console.error('Search box input not found, skipping...');
+        continue;
+      }
 
       // Extract job details
       const jobDetails = await page.evaluate(() => {
@@ -43,14 +47,12 @@ async function scrapeJobDetails(links) {
     }
   }
 
-  // Close the browser when all links have been processed
   await browser.close();
 }
 
 const jobLinks = [
   "https://www.linkedin.com/comm/jobs/view/3915313940",
   "https://www.linkedin.com/comm/jobs/view/3907648468",
-  // Add more links as needed
 ];
 
-scrapeJobDetails(jobLinks); // Call the function with the job links
+scrapeJobDetails(jobLinks);
