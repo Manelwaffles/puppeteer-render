@@ -1,4 +1,3 @@
-# Start from the official Puppeteer Docker image
 FROM ghcr.io/puppeteer/puppeteer:19.7.2
 
 # Install Google Chrome Stable
@@ -24,12 +23,5 @@ RUN npm ci
 # Copy the rest of the application
 COPY . .
 
-# Use a custom entrypoint script for launching
-COPY entrypoint.sh /usr/src/app/entrypoint.sh
-RUN chmod +x /usr/src/app/entrypoint.sh
-
-# Set the entrypoint script to initialize the environment
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
-
-# Default command to run when starting the container
-CMD ["node", "index.js"]
+# Run the Node.js application with tracing
+CMD ["node", "--trace-warnings", "index.js"]
