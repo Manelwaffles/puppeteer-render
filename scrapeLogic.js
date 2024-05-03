@@ -4,7 +4,7 @@ async function scrapeJobDetails(links) {
   const browser = await puppeteer.launch({ headless: false }); // Launch a new browser session with headless mode off for debugging
   const page = await browser.newPage();
 
-  // Navigate to the login page
+  // Navigate to the LinkedIn login page
   await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2' });
 
   // Wait for the username and password fields to be visible
@@ -12,12 +12,17 @@ async function scrapeJobDetails(links) {
   await page.waitForSelector('#password', { visible: true });
 
   // Type in credentials and submit the form
-  await page.type('#username', 'your-email@example.com'); // Replace with your actual username
+  await page.type('#username', 'info@manelwaffles.com'); // Replace with your actual username
   await page.type('#password', 'JlasdhnGWuhfnas$%$'); // Ensure this is your correct password
   await page.click('button[type="submit"]');
 
   // Wait for navigation after login
-  await page.waitForNavigation({ waitUntil: 'networkidle0' });
+  try {
+    await page.waitForNavigation({ waitUntil: 'networkidle0' });
+  } catch (error) {
+    console.error('Login failed or navigation timeout:', error);
+    return; // Stop execution if login fails
+  }
 
   // Process each job link
   for (const link of links) {
@@ -35,7 +40,7 @@ async function scrapeJobDetails(links) {
 
       console.log(`Job Details for ${link}: ${jobDetails}`);
     } catch (error) {
-      console.error(`Error processing ${link}: ${error}`);
+      console.error(`Error processing ${link}:`, error);
     }
   }
 
