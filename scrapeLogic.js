@@ -1,41 +1,56 @@
 const puppeteer = require('puppeteer');
 
 async function scrapeJobDetails(links) {
-  const browser = await puppeteer.launch({ headless: false }); // Launch a new browser session
-  const page = await browser.newPage(); // Open a new page
+  const browser = await puppeteer.launch({ headless: false }); // Set to false to watch the browser actions
+  const page = await browser.newPage();
 
-  // Navigate to LinkedIn login page
+  // Navigate to the login page
   await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2' });
-
-  // Enter credentials and login
   await page.waitForSelector('#username', { visible: true });
   await page.waitForSelector('#password', { visible: true });
-  await page.type('#username', 'your-email@example.com'); // Replace with your actual username
-  await page.type('#password', 'yourpassword'); // Replace with your actual password
-  await page.click('button[type="submit"]'); // Click the login button
-  await page.waitForNavigation({ waitUntil: 'networkidle0' }); // Wait for page load after login
 
-  // Scrape job details
+  // Enter credentials and login (replace 'your-email@example.com' and 'yourpassword' with your actual credentials)
+  await page.type('#username', 'your-email@example.com');
+  await page.type('#password', 'yourpassword');
+  await page.click('button[type="submit"]');
+  await page.waitForNavigation({ waitUntil: 'networkidle0' });
+
+  // Navigate and scrape each job link
   for (const link of links) {
-    await page.goto(link, { waitUntil: 'networkidle2' }); // Navigate to the job link
-    
-    // Extract job details from the specific div
-    const jobDetails = await page.evaluate(() => {
-      const element = document.querySelector('.jobs-description__content .jobs-box__html-content .mt4');
-      return element ? element.innerHTML.trim() : 'No job details found'; // Get the inner HTML of the element
-    });
-    
-    console.log(`Job Details for ${link}: ${jobDetails}`); // Output the job details
+    try {
+      await page.goto(link, { waitUntil: 'networkidle2' });
+
+      // Check for the presence of the search box input to handle the specific error
+      const searchInputExists = await page.$('.search-box__input');
+      if (!searchInputExists) {
+        console.error('Search box input not found, taking a screenshot for debugging...');
+        await page.screenshot({ path: `debug-${Date.now()}.png` });
+        continue; // Skip this link and go to the next one
+      }
+
+      // Wait for the specific element to be sure it's loaded
+      await page.waitForSelector('.jobs-description__content .jobs-box__html-content .mt4', { visible: true });
+
+      // Extract job details
+      const jobDetails = await page.evaluate(() => {
+        const element = document.querySelector('.jobs-description__content .jobs-box__html-content .mt4');
+        return element ? element.innerHTML.trim() : 'No job details found';
+      });
+
+      console.log(`Job Details for ${link}: ${jobDetails}`);
+    } catch (error) {
+      console.error(`Error processing ${link}: ${error}`);
+    }
   }
 
-  // Close the browser session
+  // Close the browser when all links have been processed
   await browser.close();
 }
 
 const jobLinks = [
   "https://www.linkedin.com/comm/jobs/view/3915313940",
   "https://www.linkedin.com/comm/jobs/view/3907648468",
-  // add more links as needed
+  // Add more links as needed
 ];
 
 scrapeJobDetails(jobLinks); // Call the function with the job links
