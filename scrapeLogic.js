@@ -1,51 +1,32 @@
-const puppeteer = require("puppeteer");
-require("dotenv").config();
+const puppeteer = require('puppeteer');
 
-const scrapeLogic = async (res) => {
-  const browser = await puppeteer.launch({
-    args: [
-      "--disable-setuid-sandbox",
-      "--no-sandbox",
-      "--single-process",
-      "--no-zygote",
-    ],
-    executablePath:
-      process.env.NODE_ENV === "production"
-        ? process.env.PUPPETEER_EXECUTABLE_PATH
-        : puppeteer.executablePath(),
-  });
-  try {
-    const page = await browser.newPage();
+// Sample job links array
+const jobLinks = [
+  "https://www.linkedin.com/comm/jobs/view/3915313940",
+  "https://www.linkedin.com/comm/jobs/view/3907648468",
+  "https://www.linkedin.com/comm/jobs/view/3912193180",
+  "https://www.linkedin.com/comm/jobs/view/3912581553",
+  "https://www.linkedin.com/comm/jobs/view/3909463228",
+  "https://www.linkedin.com/comm/jobs/view/3911756252"
+];
 
-    await page.goto("https://developer.chrome.com/");
+async function scrapeJobDetails(links) {
+  const browser = await puppeteer.launch(); // Launch a new browser session
+  const page = await browser.newPage(); // Open a new page
 
-    // Set screen size
-    await page.setViewport({ width: 1080, height: 1024 });
-
-    // Type into search box
-    await page.type(".search-box__input", "automate beyond recorder");
-
-    // Wait and click on first result
-    const searchResultSelector = ".search-box__link";
-    await page.waitForSelector(searchResultSelector);
-    await page.click(searchResultSelector);
-
-    // Locate the full title with a unique string
-    const textSelector = await page.waitForSelector(
-      "text/Customize and automate"
-    );
-    const fullTitle = await textSelector.evaluate((el) => el.textContent);
-
-    // Print the full title
-    const logStatement = `The title of this blog post is ${fullTitle}`;
-    console.log(logStatement);
-    res.send(logStatement);
-  } catch (e) {
-    console.error(e);
-    res.send(`Something went wrong while running Puppeteer: ${e}`);
-  } finally {
-    await browser.close();
+  for (const link of links) {
+    await page.goto(link, { waitUntil: 'networkidle2' }); // Navigate to the job link
+    
+    // Extract job details
+    const jobDetails = await page.evaluate(() => {
+      const element = document.querySelector('.jobs-box__html-content.jobs-description-content__text.t-14.t-normal.jobs-description-content__text--stretch');
+      return element ? element.innerText.trim() : 'No job details found'; // Get the text content of the element
+    });
+    
+    console.log(`Job Details for ${link}: ${jobDetails}`); // Output the job details
   }
-};
 
-module.exports = { scrapeLogic };
+  await browser.close(); // Close the browser session
+}
+
+scrapeJobDetails(jobLinks); // Call the function with the job links
